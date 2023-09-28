@@ -49,20 +49,35 @@ class Client(object):
         print(a)
         return a
 
-    def get_notification(self):
-        a = self.connection.notification()
-        print(a)
-        return a
+    # def get_notification(self):
+    #     a = self.connection.notification()
+    #     print(a)
+    #     return a
+    #
+    # def get_notification2(self):
+    #     a = self.connection.notification2()
+    #     print(a)
+    #     return a
 
-    def get_notification2(self):
-        a = self.connection.notification2()
-        print(a)
-        return a
+    def do_something_on_get_notification(self, notification):
+        print(f"Notification received: {notification}")
+        return notification
+
+    def do_something_on_get_notification2(self, notification):
+        print(f"Notification 2 received: {notification}")
+        return notification
 
 
 def main():
+    Pyro5.api.config.SERVERTYPE = "thread"
+    daemon = Pyro5.api.Daemon()
+    client_uri = daemon.register(Client())
+
     client = Client()
     client.connect()
+
+    client.connection.register_client(client.name, client.public_key, client_uri.asString())
+    daemon.requestLoop()
     # client.register_client(client.name, client.public_key, client.remote_object_reference)
     # client.post_product('1234', 'test', 'test', 1, 1, 1)
     # client.get_product()

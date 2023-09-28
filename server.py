@@ -103,7 +103,7 @@ class Server(object):
                 print('Product removed successfully')
 
                 # update stock.csv with movement (add or remove) and quantity of products
-                self.update_stock_log(code, quantity* -1, datetime.now().strftime("%d/%m/%Y"),
+                self.update_stock_log(code, quantity * -1, datetime.now().strftime("%d/%m/%Y"),
                                       datetime.now().strftime("%H:%M:%S"))
             else:
                 print('Invalid quantity')
@@ -162,13 +162,15 @@ class Server(object):
             products_with_negative_movement_in_the_last_3_days['code'])]
         return products_withouth_movement.to_string(index=False)
 
+    def register_client_in_server(self, name, client_uri, remote_object_reference):
+        client_proxy = Pyro5.api.Proxy(client_uri)
+
 
 def main():
     daemon = Pyro5.api.Daemon()  # make a Pyro daemon
     ns = Pyro5.api.locate_ns()  # find the name server
     uri = daemon.register(Server)  # register the greeting maker as a Pyro object
     ns.register("product.stock", uri)  # register the object with a name in the name server
-
     print("Ready.")
     daemon.requestLoop()  # start the event loop of the server to wait for calls
 
