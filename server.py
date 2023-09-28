@@ -5,6 +5,7 @@ from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from datetime import datetime
+import base64
 
 
 class Server(object):
@@ -55,7 +56,22 @@ class Server(object):
         self.clients = pd.read_csv('csvs/clients.csv')
 
     @Pyro5.api.expose
-    def register_product(self, code, name, description, quantity, price, stock, signature):
+    def register_product(self, code, name, description, quantity, price, stock, signature_string):
+        signature = base64.b64decode(signature_string)
+
+        # for key in self.clients['public_key'].values:
+        key_string = self.clients['public_key'].values[-1]
+        # use keys/public_key.der to verify signature
+        message = bytes(f'{code}{name}{description}{quantity}{price}{stock}', encoding='utf8')
+        # message = b'To be signed'
+        key = RSA.import_key(key_string)
+        h = SHA256.new(message)
+        try:
+            pkcs1_15.new(key).verify(h, signature)
+            print("The signature is valid.")
+        except (ValueError, TypeError):
+            print("The signature is not valid.")
+
         df = pd.DataFrame({'code': [code],
                            'name': [name],
                            'description': [description],
@@ -87,7 +103,7 @@ class Server(object):
                 print('Product removed successfully')
 
                 # update stock.csv with movement (add or remove) and quantity of products
-                self.update_stock_log(code, quantity, datetime.now().strftime("%d/%m/%Y"),
+                self.update_stock_log(code, quantity* -1, datetime.now().strftime("%d/%m/%Y"),
                                       datetime.now().strftime("%H:%M:%S"))
             else:
                 print('Invalid quantity')
@@ -124,7 +140,8 @@ class Server(object):
         # get products withouth movement in a period of time
         self.stock['date'] = pd.to_datetime(self.stock['date'], format="%d/%m/%Y")
 
-        # get products withouth movement in a period of time. So look for products that are in products.csv but not in stock.csv in the period of time, using stock.csv date as reference
+        # get products withouth movement in a period of time. So look for products that are in products.csv but not
+        # in stock.csv in the period of time, using stock.csv date as reference
         products_withouth_movement = self.products.loc[~self.products['code'].isin(
             self.stock.loc[(self.stock['date'] >= initial_date) & (self.stock['date'] <= final_date)]['code'])]
 
@@ -139,8 +156,6 @@ class Server(object):
             self.stock.loc[(self.stock['date'] >= datetime.now().strftime("%d/%m/%Y")) & (
                     self.stock['date'] <= (datetime.now() - pd.DateOffset(days=3)).strftime("%d/%m/%Y"))][
                 'code'])]
-
-
 
 
 def main():

@@ -12,7 +12,9 @@ def gui():
     # All the stuff inside your window.
     layout = [[sg.Text('Welcome to the client interface')],
               [sg.Text('Choose an option:')],
-              [sg.Button('Register client'), sg.Button('Post product'), sg.Button('Remove product'), sg.Button('Get products in stock'), sg.Button('Get Stock Log'), sg.Button('Get products withouth movement')], [sg.Button('Exit')]]
+              [sg.Button('Register client'), sg.Button('Post product'), sg.Button('Remove product'), sg.Button('Get '
+                                                                                                               'products in stock'),
+               sg.Button('Get Stock Log'), sg.Button('Get products withouth movement')], [sg.Button('Exit')]]
 
     # Create the Window
     window = sg.Window('Client', layout)
@@ -20,6 +22,7 @@ def gui():
     # create a client object
     client = Client()
     client.connect()
+
 
     # Event Loop to process "events" and get the "values" of the inputs
     while True:
@@ -73,7 +76,6 @@ def gui():
                     sg.popup('Product removed successfully')
 
             window2.close()
-
 
         if event == 'Get products in stock':
             response = client.get_product()

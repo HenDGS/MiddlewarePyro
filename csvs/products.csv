@@ -1,3 +1,7 @@
 code,name,description,quantity,price,stock,date,hour
-120,Coca,Refri,18,10,50,25/09/2023,00:04:08
+120,Coca,Refri,8,10,50,25/09/2023,00:04:08
 121,Coca,Refri,17,10,50,25/09/2023,00:04:08
+55,Kitkat,Doce,3,5,60,25/09/2023,20:45:10
+99,Kitkatttt,Chocolate,10,3,50,25/09/2023,20:48:23
+a,a,a,5,5,5,25/09/2023,21:00:46
+1234,test,test,1,1,1,25/09/2023,22:19:44
