@@ -8,23 +8,19 @@ from client import Client
 
 # create a gui for client methods
 def gui():
-    sg.theme('DarkAmber')  # Add a touch of color
-    # All the stuff inside your window.
-    layout = [[sg.Text('Welcome to the client interface')],
+    sg.theme('DarkAmber')
+    layout = [[sg.Text('Client')],
               [sg.Text('Choose an option:')],
               [sg.Button('Register client'), sg.Button('Post product'), sg.Button('Remove product'), sg.Button('Get '
                                                                                                                'products in stock'),
-               sg.Button('Get Stock Log'), sg.Button('Get products withouth movement')], [sg.Button('Exit')]]
+               sg.Button('Get Stock Log'), sg.Button('Get products withouth movement'), sg.Button('Get Notification'), sg.Button('Get Notification2')], [sg.Button('Exit')]]
 
     # Create the Window
     window = sg.Window('Client', layout)
 
-    # create a client object
     client = Client()
     client.connect()
 
-
-    # Event Loop to process "events" and get the "values" of the inputs
     while True:
         event, values = window.read()
 
@@ -118,6 +114,14 @@ def gui():
                     sg.popup(response)
 
             window2.close()
+
+        if event == 'Get Notification':
+            response = client.get_notification()
+            sg.popup(response)
+
+        if event == 'Get Notification2':
+            response = client.get_notification2()
+            sg.popup(response)
 
     window.close()
 

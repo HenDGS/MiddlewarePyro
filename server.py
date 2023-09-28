@@ -49,7 +49,7 @@ class Server(object):
         df = pd.DataFrame({'name': [name],
                            'public_key': [public_key],
                            'remote_object_reference': [remote_object_reference]})
-        # save to csv file
+
         df.to_csv('csvs/clients.csv', mode='a', header=False, index=False)
         print('Client registered successfully')
 
@@ -92,7 +92,7 @@ class Server(object):
 
     @Pyro5.api.expose
     def remove_product(self, code, quantity):
-        code = int(code)
+        code = str(code)
         quantity = int(quantity)
         # check if product exists
         if code in self.products['code'].values:
@@ -140,8 +140,6 @@ class Server(object):
         # get products withouth movement in a period of time
         self.stock['date'] = pd.to_datetime(self.stock['date'], format="%d/%m/%Y")
 
-        # get products withouth movement in a period of time. So look for products that are in products.csv but not
-        # in stock.csv in the period of time, using stock.csv date as reference
         products_withouth_movement = self.products.loc[~self.products['code'].isin(
             self.stock.loc[(self.stock['date'] >= initial_date) & (self.stock['date'] <= final_date)]['code'])]
 
@@ -151,11 +149,18 @@ class Server(object):
     def notification(self):
         # get products that stock is lesser than quantity
         products = self.products.loc[self.products['stock'] < self.products['quantity']]
-        # get products that haven't had negative movement in 3 days
-        products_withouth_movement = self.products.loc[~self.products['code'].isin(
-            self.stock.loc[(self.stock['date'] >= datetime.now().strftime("%d/%m/%Y")) & (
-                    self.stock['date'] <= (datetime.now() - pd.DateOffset(days=3)).strftime("%d/%m/%Y"))][
-                'code'])]
+        return products.to_string(index=False)
+
+    @Pyro5.api.expose
+    def notification2(self):
+        # get products that haven't had negative movement in 3 days. Based on existing codes in self.products, and movement / negative value are in self.stock
+        products_in_both = self.products.loc[self.products['code'].isin(self.stock['code'])]
+        products_with_negative_movement = self.stock.loc[self.stock['quantity'] < 0]
+        products_with_negative_movement_in_the_last_3_days = products_with_negative_movement.loc[
+            products_with_negative_movement['date'] >= (datetime.now() - pd.Timedelta(days=3)).strftime("%d/%m/%Y")]
+        products_withouth_movement = products_in_both.loc[~products_in_both['code'].isin(
+            products_with_negative_movement_in_the_last_3_days['code'])]
+        return products_withouth_movement.to_string(index=False)
 
 
 def main():
