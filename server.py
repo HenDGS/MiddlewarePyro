@@ -1,3 +1,5 @@
+import time
+
 import pandas as pd
 import numpy as np
 import Pyro5.api
@@ -6,10 +8,13 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from datetime import datetime
 import base64
+import threading
 
 
 class Server(object):
     def __init__(self):
+        self.logged_on_clients = {}
+
         try:
             pd.read_csv('csvs/clients.csv')
         except FileNotFoundError:
@@ -46,6 +51,17 @@ class Server(object):
 
     @Pyro5.api.expose
     def register_client(self, name, public_key, remote_object_reference):
+        # client_proxy = Pyro5.api.Proxy(remote_object_reference)
+        # remote_object_reference = client_proxy._pyroUri.asString()
+        # self.logged_on_clients[name] = client_proxy
+
+        remote_object_reference2 = remote_object_reference
+        self.logged_on_clients[name] = remote_object_reference
+
+        remote_object_reference = str(remote_object_reference)
+
+        print(f'Client {name} registered successfully')
+
         df = pd.DataFrame({'name': [name],
                            'public_key': [public_key],
                            'remote_object_reference': [remote_object_reference]})
@@ -54,6 +70,10 @@ class Server(object):
         print('Client registered successfully')
 
         self.clients = pd.read_csv('csvs/clients.csv')
+
+        # todo remove after test
+        # self.notification(remote_object_reference2)
+        self.notification_thread()
 
     @Pyro5.api.expose
     def register_product(self, code, name, description, quantity, price, stock, signature_string):
@@ -147,13 +167,35 @@ class Server(object):
 
     @Pyro5.api.expose
     def notification(self):
-        # get products that stock is lesser than quantity
-        products = self.products.loc[self.products['stock'] < self.products['quantity']]
-        return products.to_string(index=False)
+        while True:
+            products = self.products.loc[self.products['stock'] < self.products['quantity']]
+
+            products_in_both = self.products.loc[self.products['code'].isin(self.stock['code'])]
+            products_with_negative_movement = self.stock.loc[self.stock['quantity'] < 0]
+            products_with_negative_movement_in_the_last_3_days = products_with_negative_movement.loc[
+                products_with_negative_movement['date'] >= (datetime.now() - pd.Timedelta(days=3)).strftime("%d/%m/%Y")]
+            products_withouth_movement = products_in_both.loc[~products_in_both['code'].isin(
+                products_with_negative_movement_in_the_last_3_days['code'])]
+
+            for client in self.logged_on_clients.values():
+                try:
+                    print(f'Notifying client {client}')
+                    client._pyroClaimOwnership()
+                    client.do_something_on_get_notification(products.to_string(index=False),
+                                                            products_withouth_movement.to_string(
+                                                                index=False))
+                except Exception as e:
+                    pass
+
+            time.sleep(15)
+
+    def notification_thread(self):
+        threading.Thread(target=self.notification).start()
 
     @Pyro5.api.expose
     def notification2(self):
-        # get products that haven't had negative movement in 3 days. Based on existing codes in self.products, and movement / negative value are in self.stock
+        # get products that haven't had negative movement in 3 days. Based on existing codes in self.products,
+        # and movement / negative value are in self.stock
         products_in_both = self.products.loc[self.products['code'].isin(self.stock['code'])]
         products_with_negative_movement = self.stock.loc[self.stock['quantity'] < 0]
         products_with_negative_movement_in_the_last_3_days = products_with_negative_movement.loc[
@@ -169,6 +211,7 @@ class Server(object):
 def main():
     daemon = Pyro5.api.Daemon()  # make a Pyro daemon
     ns = Pyro5.api.locate_ns()  # find the name server
+    server = Server()
     uri = daemon.register(Server)  # register the greeting maker as a Pyro object
     ns.register("product.stock", uri)  # register the object with a name in the name server
     print("Ready.")

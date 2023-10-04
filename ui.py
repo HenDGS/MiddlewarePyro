@@ -1,9 +1,7 @@
 import PySimpleGUI as sg
-import os
-import sys
-import time
 import threading
 from client import Client
+import Pyro5.api
 
 
 # create a gui for client methods
@@ -13,13 +11,18 @@ def gui():
               [sg.Text('Choose an option:')],
               [sg.Button('Register client'), sg.Button('Post product'), sg.Button('Remove product'), sg.Button('Get '
                                                                                                                'products in stock'),
-               sg.Button('Get Stock Log'), sg.Button('Get products withouth movement'), sg.Button('Get Notification'), sg.Button('Get Notification2')], [sg.Button('Exit')]]
+               sg.Button('Get Stock Log'), sg.Button('Get products withouth movement')], [sg.Button('Exit')]]
 
     # Create the Window
     window = sg.Window('Client', layout)
 
     client = Client()
     client.connect()
+
+    daemon = Pyro5.api.Daemon()  # create a Pyro5 daemon
+    client_uri = daemon.register(client)  # register the client as a Pyro object
+
+    threading.Thread(target=daemon.requestLoop).start()
 
     while True:
         event, values = window.read()
@@ -28,7 +31,7 @@ def gui():
             break
 
         if event == 'Register client':
-            client.register_client(client.name, client.public_key, client.remote_object_reference)
+            client.register_client(client.name, client.public_key, client)
             sg.popup('Client registered successfully')
 
         if event == 'Post product':
@@ -114,14 +117,6 @@ def gui():
                     sg.popup(response)
 
             window2.close()
-
-        if event == 'Get Notification':
-            response = client.get_notification()
-            sg.popup(response)
-
-        if event == 'Get Notification2':
-            response = client.get_notification2()
-            sg.popup(response)
 
     window.close()
 

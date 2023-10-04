@@ -1,8 +1,10 @@
+import threading
 import Pyro5.api
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import base64
+import PySimpleGUI as sg
 
 
 class Client(object):
@@ -49,35 +51,25 @@ class Client(object):
         print(a)
         return a
 
-    # def get_notification(self):
-    #     a = self.connection.notification()
-    #     print(a)
-    #     return a
-    #
-    # def get_notification2(self):
-    #     a = self.connection.notification2()
-    #     print(a)
-    #     return a
-
-    def do_something_on_get_notification(self, notification):
-        print(f"Notification received: {notification}")
-        return notification
-
-    def do_something_on_get_notification2(self, notification):
-        print(f"Notification 2 received: {notification}")
-        return notification
+    @Pyro5.api.callback
+    @Pyro5.api.expose
+    def do_something_on_get_notification(self, notification1, notification2):
+        print(f'Products With Stock Lower Than Quantity: {notification1}')
+        print(f'Products Without Movement: {notification2}')
 
 
 def main():
     Pyro5.api.config.SERVERTYPE = "thread"
-    daemon = Pyro5.api.Daemon()
-    client_uri = daemon.register(Client())
-
     client = Client()
     client.connect()
 
-    client.connection.register_client(client.name, client.public_key, client_uri.asString())
-    daemon.requestLoop()
+    daemon = Pyro5.api.Daemon()  # create a Pyro5 daemon
+    client_uri = daemon.register(client)  # register the client as a Pyro object
+
+    threading.Thread(target=daemon.requestLoop).start()
+
+    client.register_client(client.name, client.public_key, client)
+
     # client.register_client(client.name, client.public_key, client.remote_object_reference)
     # client.post_product('1234', 'test', 'test', 1, 1, 1)
     # client.get_product()
@@ -85,6 +77,7 @@ def main():
     # client.get_products_withouth_movement('2023-09-20', '2023-09-22')
     # client.remove_product('120', 1)
     # client.get_notification2()
+
 
 if __name__ == "__main__":
     main()
