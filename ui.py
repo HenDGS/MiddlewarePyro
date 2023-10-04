@@ -25,6 +25,10 @@ def gui():
     threading.Thread(target=daemon.requestLoop).start()
 
     while True:
+        # if queue is not empty, show notification ce
+        if not client.q.empty():
+            sg.popup(client.q.get())
+
         event, values = window.read()
 
         if event == sg.WIN_CLOSED or event == 'Exit':

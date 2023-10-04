@@ -1,10 +1,10 @@
+import base64
 import threading
 import Pyro5.api
-from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-import base64
-import PySimpleGUI as sg
+from Crypto.Signature import pkcs1_15
+import queue
 
 
 class Client(object):
@@ -13,6 +13,7 @@ class Client(object):
         self.public_key = RSA.import_key(open('keys/public_key.der').read())
         self.remote_object_reference = 'PYRONAME:product.stock'
         self.connection = None
+        self.q = queue.Queue()
 
     def connect(self):
         self.connection = Pyro5.api.Proxy(self.remote_object_reference)
@@ -56,6 +57,8 @@ class Client(object):
     def do_something_on_get_notification(self, notification1, notification2):
         print(f'Products With Stock Lower Than Quantity: {notification1}')
         print(f'Products Without Movement: {notification2}')
+        # add to queue
+        self.q.put(notification1)
 
 
 def main():

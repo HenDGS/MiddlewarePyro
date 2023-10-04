@@ -1,14 +1,12 @@
-import time
-
-import pandas as pd
-import numpy as np
-import Pyro5.api
-from Crypto.Signature import pkcs1_15
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
-from datetime import datetime
 import base64
 import threading
+import time
+from datetime import datetime
+import Pyro5.api
+import pandas as pd
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
 
 
 class Server(object):
@@ -187,7 +185,7 @@ class Server(object):
                 except Exception as e:
                     pass
 
-            time.sleep(15)
+            time.sleep(30)
 
     def notification_thread(self):
         threading.Thread(target=self.notification).start()
