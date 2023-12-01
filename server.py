@@ -49,11 +49,7 @@ class Server(object):
 
     @Pyro5.api.expose
     def register_client(self, name, public_key, remote_object_reference):
-        # client_proxy = Pyro5.api.Proxy(remote_object_reference)
-        # remote_object_reference = client_proxy._pyroUri.asString()
-        # self.logged_on_clients[name] = client_proxy
-
-        remote_object_reference2 = remote_object_reference
+        # remote_object_reference2 = remote_object_reference
         self.logged_on_clients[name] = remote_object_reference
 
         remote_object_reference = str(remote_object_reference)
@@ -69,26 +65,15 @@ class Server(object):
 
         self.clients = pd.read_csv('csvs/clients.csv')
 
-        # todo remove after test
-        # self.notification(remote_object_reference2)
         self.notification_thread()
 
     @Pyro5.api.expose
     def register_product(self, code, name, description, quantity, price, stock, signature_string):
-        signature = base64.b64decode(signature_string)
+        if code in self.products['code'].values:
+            print('Product already registered')
+            return
 
-        # for key in self.clients['public_key'].values:
-        key_string = self.clients['public_key'].values[-1]
-        # use keys/public_key.der to verify signature
-        message = bytes(f'{code}{name}{description}{quantity}{price}{stock}', encoding='utf8')
-        # message = b'To be signed'
-        key = RSA.import_key(key_string)
-        h = SHA256.new(message)
-        try:
-            pkcs1_15.new(key).verify(h, signature)
-            print("The signature is valid.")
-        except (ValueError, TypeError):
-            print("The signature is not valid.")
+        self.check_signature(code, name, description, quantity, price, stock, signature_string)
 
         df = pd.DataFrame({'code': [code],
                            'name': [name],
@@ -109,7 +94,9 @@ class Server(object):
         self.update_stock_log(code, quantity, datetime.now().strftime("%d/%m/%Y"), datetime.now().strftime("%H:%M:%S"))
 
     @Pyro5.api.expose
-    def remove_product(self, code, quantity):
+    def remove_product(self, code, quantity, signature_string):
+        self.check_signature(code=code, quantity=quantity, signature_string=signature_string)
+
         code = str(code)
         quantity = int(quantity)
         # check if product exists
@@ -128,7 +115,6 @@ class Server(object):
         else:
             print('Product not found')
 
-    @Pyro5.api.expose
     def update_stock_log(self, code, quantity, date, hour):
         # update stock.csv with movement (add or remove) and quantity of products
         df = pd.DataFrame({'code': [code],
@@ -163,7 +149,6 @@ class Server(object):
 
         return products_withouth_movement.to_string(index=False)
 
-    @Pyro5.api.expose
     def notification(self):
         while True:
             products = self.products.loc[self.products['stock'] < self.products['quantity']]
@@ -182,28 +167,29 @@ class Server(object):
                     client.do_something_on_get_notification(products.to_string(index=False),
                                                             products_withouth_movement.to_string(
                                                                 index=False))
-                except Exception as e:
+                except:
                     pass
 
-            time.sleep(30)
+            time.sleep(120)
 
     def notification_thread(self):
         threading.Thread(target=self.notification).start()
 
-    @Pyro5.api.expose
-    def notification2(self):
-        # get products that haven't had negative movement in 3 days. Based on existing codes in self.products,
-        # and movement / negative value are in self.stock
-        products_in_both = self.products.loc[self.products['code'].isin(self.stock['code'])]
-        products_with_negative_movement = self.stock.loc[self.stock['quantity'] < 0]
-        products_with_negative_movement_in_the_last_3_days = products_with_negative_movement.loc[
-            products_with_negative_movement['date'] >= (datetime.now() - pd.Timedelta(days=3)).strftime("%d/%m/%Y")]
-        products_withouth_movement = products_in_both.loc[~products_in_both['code'].isin(
-            products_with_negative_movement_in_the_last_3_days['code'])]
-        return products_withouth_movement.to_string(index=False)
+    def check_signature(self, code='', name='', description='', quantity='', price='', stock='', signature_string=''):
+        signature = base64.b64decode(signature_string)
 
-    def register_client_in_server(self, name, client_uri, remote_object_reference):
-        client_proxy = Pyro5.api.Proxy(client_uri)
+        # for key in self.clients['public_key'].values:
+        key_string = self.clients['public_key'].values[-1]
+        # use keys/public_key.der to verify signature
+        message = bytes(f'{code}{name}{description}{quantity}{price}{stock}', encoding='utf8')
+        # message = b'To be signed'
+        key = RSA.import_key(key_string)
+        h = SHA256.new(message)
+        try:
+            pkcs1_15.new(key).verify(h, signature)
+            print("The signature is valid.")
+        except (ValueError, TypeError):
+            print("The signature is not valid.")
 
 
 def main():

@@ -25,18 +25,17 @@ def gui():
     threading.Thread(target=daemon.requestLoop).start()
 
     while True:
-        # if queue is not empty, show notification ce
         if not client.q.empty():
             sg.popup(client.q.get())
 
-        event, values = window.read()
+        event, values = window.read(timeout=0)
 
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
 
         if event == 'Register client':
             client.register_client(client.name, client.public_key, client)
-            sg.popup('Client registered successfully')
+            sg.popup('Client registered')
 
         if event == 'Post product':
             layout = [[sg.Text('Code:'), sg.InputText()],
@@ -57,7 +56,7 @@ def gui():
 
                 if event2 == 'Submit':
                     client.post_product(values2[0], values2[1], values2[2], values2[3], values2[4], values2[5])
-                    sg.popup('Product posted successfully')
+                    sg.popup('Product posted')
 
             window2.close()
 
@@ -76,7 +75,7 @@ def gui():
 
                 if event2 == 'Submit':
                     client.remove_product(values2[0], values2[1])
-                    sg.popup('Product removed successfully')
+                    sg.popup('Product removed')
 
             window2.close()
 

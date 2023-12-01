@@ -35,7 +35,14 @@ class Client(object):
         self.connection.register_product(code, name, description, quantity, price, stock, signature_string)
 
     def remove_product(self, code, quantity):
-        self.connection.remove_product(code, quantity)
+        message = bytes(f'{code}{''}{''}{quantity}{''}{''}', encoding='utf8')
+
+        key = RSA.import_key(open("keys/private_key.der").read())
+        h = SHA256.new(message)
+        signature = pkcs1_15.new(key).sign(h)
+        signature_string = base64.b64encode(signature).decode('utf-8')
+
+        self.connection.remove_product(code, quantity, signature_string)
 
     def get_product(self):
         a = self.connection.get_product()
@@ -59,6 +66,7 @@ class Client(object):
         print(f'Products Without Movement: {notification2}')
         # add to queue
         self.q.put(notification1)
+        self.q.put(notification2)
 
 
 def main():
@@ -72,14 +80,6 @@ def main():
     threading.Thread(target=daemon.requestLoop).start()
 
     client.register_client(client.name, client.public_key, client)
-
-    # client.register_client(client.name, client.public_key, client.remote_object_reference)
-    # client.post_product('1234', 'test', 'test', 1, 1, 1)
-    # client.get_product()
-    # client.get_stock_log('2023-09-20', '2023-09-22')
-    # client.get_products_withouth_movement('2023-09-20', '2023-09-22')
-    # client.remove_product('120', 1)
-    # client.get_notification2()
 
 
 if __name__ == "__main__":
